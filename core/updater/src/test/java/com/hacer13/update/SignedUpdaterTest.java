@@ -55,4 +55,17 @@ public class SignedUpdaterTest {
     @Test public void pngDimensionsBounded()throws Exception{byte[] p=new byte[33];byte[] head={(byte)137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82};System.arraycopy(head,0,p,0,head.length);java.nio.ByteBuffer.wrap(p,16,4).putInt(999999);java.nio.ByteBuffer.wrap(p,20,4).putInt(1);assertThrows(SecurityException.class,()->SignedUpdater.validateData("resources/badge.png",p));}
     @Test public void concurrentInstallIsSerialized()throws Exception{byte[] one=release(1,"one"),two=release(2,"two");ExecutorService pool=Executors.newFixedThreadPool(2);try{Future<?> a=pool.submit(()->{try{engine.install(one);}catch(Exception e){throw new RuntimeException(e);}});Future<?> b=pool.submit(()->{try{engine.install(two);}catch(Exception e){throw new RuntimeException(e);}});a.get();b.get();assertEquals(2,engine.current().highest);assertEquals(2,engine.current().revision);}finally{pool.shutdownNow();}}
     @Test public void arbitraryNetworkHostsRejected()throws Exception{assertThrows(SecurityException.class,()->new SignedUpdater.HttpsTransport().get("https://example.com/data",10));}
+    @Test public void invalidSpkiRejected()throws Exception{assertThrows(SecurityException.class,()->new SignedUpdater(directory,Base64.getEncoder().encodeToString(new byte[44]),(u,n)->new byte[0],p->{}));}
+    @Test public void rfc8032EmptyMessageVector()throws Exception{
+        byte[] pk=hex("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a");
+        byte[] sig=hex("e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b");
+        assertTrue(org.bouncycastle.math.ec.rfc8032.Ed25519.verify(sig,0,pk,0,new byte[0],0,0));sig[63]^=1;assertFalse(org.bouncycastle.math.ec.rfc8032.Ed25519.verify(sig,0,pk,0,new byte[0],0,0));
+    }
+    private byte[] hex(String s){byte[] b=new byte[s.length()/2];for(int i=0;i<b.length;i++)b[i]=(byte)Integer.parseInt(s.substring(i*2,i*2+2),16);return b;}
+    @Test public void currentMenuDoesNotWaitForSlowNetwork()throws Exception{
+        byte[] next=release(1,"one");CountDownLatch entered=new CountDownLatch(1),resume=new CountDownLatch(1);
+        SignedUpdater slow=new SignedUpdater(directory,Base64.getEncoder().encodeToString(pair.getPublic().getEncoded()),(url,max)->{entered.countDown();if(!resume.await(5,TimeUnit.SECONDS))throw new IOException("test timeout");return blobs.get(url);},p->{});
+        ExecutorService pool=Executors.newFixedThreadPool(2);
+        try{Future<?> update=pool.submit(()->{try{slow.install(next);}catch(Exception e){throw new RuntimeException(e);}});assertTrue(entered.await(5,TimeUnit.SECONDS));Future<SignedUpdater.Snapshot> read=pool.submit(()->engine.current());assertEquals(0,read.get(1,TimeUnit.SECONDS).revision);resume.countDown();update.get(5,TimeUnit.SECONDS);}finally{resume.countDown();pool.shutdownNow();}
+    }
 }

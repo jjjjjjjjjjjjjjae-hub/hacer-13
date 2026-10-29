@@ -73,7 +73,7 @@ def build(args):
         raise SystemExit('APK SHA-256 does not match the explicitly reviewed input')
     if not shutil.which('gradle'): raise SystemExit('Install Gradle 8.11.1 or compatible version')
     # Local build outputs only. NEVER run this inside the public repository on a copyrighted game archive.
-    run('gradle', ':hook:assembleRelease', ':updater:jar', '--no-daemon', cwd=project)
+    run('gradle', ':hook:assembleRelease', ':updater:jar', ':updater:copyRuntimeLibs', '--no-daemon', cwd=project)
     aar = project / 'hook/build/outputs/aar/hook-release.aar'
     if not aar.is_file(): raise RuntimeError('No hook AAR produced')
     output.parent.mkdir(parents=True,exist_ok=True)
@@ -105,17 +105,19 @@ def build(args):
         extract_aar(aar,jar)
         dex_dir = wd/'hook_dex';dex_dir.mkdir()
         updater_jar = repo/'core/updater/build/libs/updater.jar'
-        run(d8,'--min-api','33','--lib',sdk/'platforms/android-35/android.jar','--output',dex_dir,jar,updater_jar)
+        runtime_jars = sorted((repo/'core/updater/build/runtime-libs').glob('*.jar'))
+        if not runtime_jars: raise RuntimeError('Missing pinned crypto runtime dependency')
+        run(d8,'--min-api','33','--lib',sdk/'platforms/android-35/android.jar','--output',dex_dir,jar,updater_jar,*runtime_jars)
         dex_files = [dex for dex in dex_dir.iterdir() if dex.name.endswith('.dex')]
-        if len(dex_files) != 1: raise RuntimeError('Expected a single hook DEX')
+        if not dex_files: raise RuntimeError('No hook DEX generated')
         # Appending a separate DEX avoids merging/replacing any of the game's existing DEX classes.
         apk_with_dex = wd/'hooked.apk'
         shutil.copyfile(rebuilt,apk_with_dex)
         with zipfile.ZipFile(apk_with_dex,'a',compression=zipfile.ZIP_DEFLATED) as zipout:
             existing = set(zipout.namelist())
             nums = [int(m.group(1) or '1') for name in existing if (m:=re.fullmatch(r'classes(\d*)\.dex',name))]
-            dex_name = f'classes{max(nums)+1}.dex'
-            zipout.write(dex_files[0],dex_name)
+            for index, dex in enumerate(sorted(dex_files),start=max(nums)+1):
+                zipout.write(dex,f'classes{index}.dex')
         aligned = wd/'aligned.apk'
         run(align,'-f','-p','4',apk_with_dex,aligned)
         signing_keystore = Path(args.keystore).expanduser().resolve()

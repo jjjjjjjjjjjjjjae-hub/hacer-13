@@ -37,7 +37,7 @@ jobs:
           python3 tools/verify_repo.py
           python3 -m unittest discover -s tests -v
       - name: Unit tests, lint, APK and source integration AAR
-        run: gradle -p core --no-daemon :updater:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :hook:assembleRelease
+        run: gradle -p core --no-daemon :updater:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :hook:assembleRelease :updater:jar :updater:copyRuntimeLibs
       - name: Verify actual APK certificate
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs core/app/build/outputs/apk/debug/app-debug.apk
@@ -50,6 +50,8 @@ jobs:
           path: |
             core/app/build/outputs/apk/debug/
             LAC-tools/hook/build/outputs/aar/
+            core/updater/build/libs/
+            core/updater/build/runtime-libs/
             core/updater/build/reports/tests/
             core/app/build/reports/
   android-runtime:
@@ -89,6 +91,7 @@ jobs:
           script: |
             gradle -p core --no-daemon :app:connectedDebugAndroidTest
             adb pull /sdcard/Android/data/com.hacer13.core/files/test-evidence core/app/build/android-evidence
+            python3 tools/test_signature_conflict.py --sdk "$ANDROID_HOME" --apk core/app/build/outputs/apk/debug/app-debug.apk --report core/app/build/android-evidence/signature-conflict.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

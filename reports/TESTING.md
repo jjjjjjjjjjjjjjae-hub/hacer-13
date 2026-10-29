@@ -4,14 +4,14 @@ Date: 2026-10-29. This file will be updated with the exact build/run results.
 
 | Check | Result |
 |---|---|
-| Java updater tests | 27 passed locally on JDK 17 |
+| Java updater tests | 30 tests, including non-blocking reads, RFC 8032 verification vector and SPKI validation; final local and CI results recorded below |
 | Python signing/archive tests | 12 passed locally |
 | Original XAPK ZIP CRC | Passed |
 | Original APK Android v2 signature | Verified with Android build-tools 35.0.0 |
 | APK/OBB package + version | `com.MA.LAC`, version code 60, matched |
 | Original OBB | Read-only; SHA-256 recorded in xapk-audit.json |
-| Android APK/AAR build and lint | In progress |
-| Android emulator UI / foreground overlay / network updater | Pending CI |
+| Android APK/AAR build and lint | Passed in Actions run 40930026644 at dc5de24; final rerun follows the non-blocking download correction |
+| Android emulator UI / foreground overlay / network updater | First run: menu + overlay passed; network updater exposed AndroidKeyStore key-import failure. Replaced with bundled BC 1.86; final rerun pending |
 | Actual LAC runtime and embedded menu | Not performed; no claim of compatibility |
 | God Mode / High Jump / Speed | Demo UI only; no gameplay implementation |
 

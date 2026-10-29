@@ -23,10 +23,11 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
       - name: Build AAR and its data-only updater dependency
-        run: gradle -p LAC-tools --no-daemon :hook:assembleRelease :updater:jar
+        run: gradle -p LAC-tools --no-daemon :hook:assembleRelease :updater:jar :updater:copyRuntimeLibs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: HACER13-Authorized-Integration-AAR
           path: |
             LAC-tools/hook/build/outputs/aar/hook-release.aar
             core/updater/build/libs/updater.jar
+            core/updater/build/runtime-libs/

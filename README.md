@@ -6,7 +6,7 @@ Android 13+ companion with a movable H13 menu, an explicit source integration AA
 
 - Native dark menu: tap H13, drag H13 or the panel header, collapse, close, animated opening. The companion overlay asks for Android notification and overlay permissions and runs as a visible foreground service with a Stop action.
 - `HacerHook.attach(Activity)` / `detach(Activity)` for a host you are authorized to modify. The included PreviewActivity uses this exact adapter. The AAR also needs `updater.jar` (or the Gradle project dependency).
-- Ed25519-pinned inventory, SHA-256 and exact size for every resource; downloads only changed blobs. Strict JSON/PNG allowlist, bounded downloads, no redirects, no executable updates.
+- Ed25519-pinned inventory using bundled Bouncy Castle 1.86, SHA-256 and exact size for every resource; downloads only changed blobs. Strict JSON/PNG allowlist, bounded downloads, no redirects, no executable updates. The BC build dependency is also SHA-256 pinned.
 - Immutable staged bundles, one atomic active/backup/highest-revision pointer, startup verification and recovery. User rollback preserves the replay floor. Clearing app data/uninstalling resets that local trust state; this is not hardware-backed anti-rollback.
 - Read-only APK/OBB audit, opt-in local packaging tools and a 90 MiB repository guard. No third-party APK, OBB or XAPK is committed or uploaded to CI.
 

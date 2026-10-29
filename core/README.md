@@ -1,28 +1,17 @@
-# HACER Core 1.0 — Android (LAC demo)
+# HACER Core 1.0.1
 
-**Status:** Source-code prototype; build validation pending. This app does not patch, inject into, or change the LAC game. Floating MOD MENU items are visual previews only.
+Android 13+ native companion and signed data updater. See the repository README and reports/TESTING.md for actual results.
 
-## What works
-- Standalone Android app (Android 13/API 33 or newer).
-- Overlay menu with user-granted *Display over other apps* permission; close button.
-- On app launch, checks `updates/lac/release.json` on this GitHub repository (at most once every 6 h, or on demand).
-- Optional user-enabled periodic update check via Android JobScheduler, approximately every 6 hours, subject to Android scheduling rules. It can be turned off in the app.
-- Authenticates downloaded data bytes using the hard-coded Ed25519 public key, with the private signing key held outside this repo.
-- Only accepts structured **data-only menu configuration** with a higher `revision`; refuses unsigned/modified/oversized/unexpected data.
-- Stores config in app-private storage using Android AtomicFile, retains the previous version for manual rollback.
-- No root, no Accessibility Service, no executable code downloads, no silent installs, no self-spreading behavior.
+Build: JDK 17, Gradle 8.11.1, SDK 35 / build-tools 35.0.0.
 
-## Build via GitHub Actions
-Open **Actions → HACER Core Android → Run workflow**, then download the **HACER-Core-1.0-debug** artifact. The artifact contains a debug/test APK. GitHub Actions also runs after pushes to `core/**` or its workflow file.
+    gradle -p core :updater:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :hook:assembleRelease
 
-## Build locally
-Open this `core/` directory as an Android Studio Gradle project. Use JDK 17, Android SDK 35. Gradle 8.11.1 and Android Gradle Plugin 8.9.2. Run `gradle assembleDebug`. Output: `core/app/build/outputs/apk/debug/app-debug.apk`.
+The same MenuView and HacerHook source adapter run in PreviewActivity and the authorized integration AAR. Companion overlay and notifications are explicit opt-ins. H13 and the header can be dragged; the menu can be opened, collapsed and closed. Gameplay controls are DEMO only.
 
-## Signed menu updates without reinstalling game
-1. Keep the Ed25519 **private key OFF GitHub**, ideally securely stored offline.
-2. Copy the desired JSON menu schema as `payload.json` with `schema=1`, `min_core=1`, and `revision` greater than the installed revision. Allowed feature fields: `id`, `title`, `description`.
-3. Install `cryptography` on your computer; run:
-   `python tools/sign_release.py path/to/ed25519_private_key.pem payload.json updates/lac/release.json`
-4. Commit only the new `updates/lac/release.json`; existing installations will check and use that signed **data** when launched/checked. No 400 MB game archive re-download.
+The :updater module is pure Java with org.json supplied by Android and a bundled, SHA-256-pinned Bouncy Castle 1.86 lightweight Ed25519 verifier. It avoids AndroidKeyStore's incompatible Ed25519 public-key import. JVM tests use the pinned test-only JSON dependency. There is no embedded third-party game.
 
-**Important:** APK application-code upgrades are different and require Android's APK signing/install process. An Ed25519 menu signature does not authorize modifying LAC and cannot replace the game's APK signature. Overlay lifetime may be limited by Android background-service rules; start it manually after granting permission.
+Updates use release-v2.json, the pinned schema-2 Ed25519 public key and hash-addressed JSON/PNG blobs. All files are validated before an atomic state pointer activates the bundle. Last-known-good presentation and highest accepted revision are independent; a rollback never reduces the network replay floor. Downloads use a separate writer lock so current-menu reads do not wait for network I/O.
+
+Background checks are scheduled by the user's explicit toggle. Android chooses their actual execution time. Overlay service is user-started and non-sticky, with a visible foreground notification and Stop action. No Accessibility, device-admin, root, automatic APK installs or cross-app save access is requested.
+
+For a stable release, keep a keystore outside the repository, supply HACER_KEYSTORE / HACER_KEYSTORE_PASS / HACER_KEY_ALIAS to Gradle, and use :app:assembleRelease. The offline tools/build_standalone.py alternative uses javac, D8, aapt2, zipalign and apksigner with that same private keystore. CI debug artifacts use a separate temporary debug certificate.

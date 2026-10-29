@@ -46,7 +46,7 @@ public class MenuSmokeTest {
         inst.runOnMainSync(()->com.hacer13.embedded.HacerHook.attach(activity));inst.waitForIdleSync();
         inst.runOnMainSync(()->assertEquals(3,switches(activity.getWindow().getDecorView())));
     }
-    @Test public void realAndroidEd25519AndGitHubUpdate()throws Exception{
+    @Test public void realAndroidSignedGitHubUpdate()throws Exception{
         File directory=new File(inst.getTargetContext().getFilesDir(),"instrumentation-update-"+System.nanoTime());
         SignedUpdater updater=new SignedUpdater(directory);String result=updater.check();
         assertTrue(result,result.contains("SHA-256"));assertTrue(updater.current().revision>=1);

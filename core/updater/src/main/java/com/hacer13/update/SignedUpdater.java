@@ -10,7 +10,7 @@ import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.*;
-import java.security.spec.X509EncodedKeySpec;
+import org.bouncycastle.math.ec.rfc8032.Ed25519;
 import java.util.*;
 import javax.net.ssl.HttpsURLConnection;
 
@@ -22,14 +22,21 @@ public final class SignedUpdater {
     public interface Fault { void at(String point) throws Exception; }
     public static final int FILE_LIMIT = 2 * 1024 * 1024, TOTAL_LIMIT = 8 * 1024 * 1024;
     private static final Object PROCESS_LOCK = new Object();
+    private static final Object INSTALL_LOCK = new Object();
     private final Path root;
-    private final PublicKey key;
+    private final byte[] key;
     private final Transport transport;
     private final Fault fault;
     public SignedUpdater(File directory) throws Exception { this(directory, Trust.PUBLIC_KEY, new HttpsTransport(), p -> {}); }
     public SignedUpdater(File directory, String publicKey, Transport transport, Fault fault) throws Exception {
         root = directory.toPath();
-        key = KeyFactory.getInstance("Ed25519").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(publicKey)));
+        // Android's default Ed25519 KeyFactory may select AndroidKeyStore and reject
+        // imported X.509 keys. Use the bundled, version-pinned lightweight verifier.
+        byte[] spki = Base64.getDecoder().decode(publicKey);
+        byte[] prefix = {0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,0x70,0x03,0x21,0x00};
+        if (spki.length != 44 || !Arrays.equals(prefix, Arrays.copyOf(spki,12))) throw new SecurityException("Invalid Ed25519 SPKI");
+        key = Arrays.copyOfRange(spki,12,44);
+        if (!Ed25519.validatePublicKeyFull(key,0)) throw new SecurityException("Invalid Ed25519 public point");
         this.transport = transport; this.fault = fault; Files.createDirectories(root);
     }
     public static final class Snapshot {
@@ -56,10 +63,16 @@ public final class SignedUpdater {
             s.put("active", previous).put("previous", ""); writeState(s); return true;
         });
     }
-    public String check() throws Exception { return locked(() -> installLocked(transport.get(Trust.MANIFEST, 65536))); }
-    public String install(byte[] envelope) throws Exception { return locked(() -> installLocked(envelope)); }
+    public String check() throws Exception { return install(transport.get(Trust.MANIFEST, 65536)); }
+    public String install(byte[] envelope) throws Exception {
+        // Serialize writers separately: rendering the current menu must never wait for network I/O.
+        synchronized (INSTALL_LOCK) {
+            try (FileChannel channel = FileChannel.open(root.resolve("install.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                 FileLock ignored = channel.lock()) { return installLocked(envelope); }
+        }
+    }
     private String installLocked(byte[] envelope) throws Exception {
-        JSONObject state = readState(); recover(state);
+        JSONObject state = locked(() -> { JSONObject s = readState(); recover(s); return s; });
         JSONObject manifest = verify(envelope);
         int incoming = integer(manifest, "revision", 1, 1_000_000);
         if (incoming <= state.getInt("highest")) return "Жаңарту жоқ · қабылданған v" + state.getInt("highest");
@@ -90,9 +103,14 @@ public final class SignedUpdater {
             Path bundle = root.resolve(id); remove(bundle);
             Files.move(stage, bundle, StandardCopyOption.ATOMIC_MOVE); syncDir(root); fault.at("before_commit");
             // One atomic pointer commits active, backup and replay floor together.
-            JSONObject next = new JSONObject().put("highest", incoming).put("active", id).put("previous", state.getString("active"));
-            writeState(next);
-            try { garbageCollect(next); } catch (IOException ignored) { /* Cleanup cannot invalidate a committed update. */ }
+            locked(() -> {
+                JSONObject latest = readState(); recover(latest);
+                if (incoming <= latest.getInt("highest")) throw new SecurityException("Revision changed during update");
+                JSONObject next = new JSONObject().put("highest", incoming).put("active", id).put("previous", latest.getString("active"));
+                writeState(next);
+                try { garbageCollect(next); } catch (IOException ignored) { /* Cleanup cannot invalidate a committed update. */ }
+                return null;
+            });
             return "Ed25519 + SHA-256 расталды · data v" + incoming + " · " + downloaded + " B жүктелді";
         } finally { remove(stage); }
     }
@@ -144,8 +162,7 @@ public final class SignedUpdater {
         if (!"Ed25519".equals(envelope.getString("algorithm"))) throw new SecurityException("Algorithm rejected");
         byte[] payload = Base64.getDecoder().decode(envelope.getString("payload_b64")), signature = Base64.getDecoder().decode(envelope.getString("signature_b64"));
         if (payload.length > 32768 || signature.length != 64) throw new SecurityException("Signature size rejected");
-        Signature verifier = Signature.getInstance("Ed25519"); verifier.initVerify(key); verifier.update(payload);
-        if (!verifier.verify(signature)) throw new SecurityException("Ed25519 signature rejected");
+        if (!Ed25519.verify(signature,0,key,0,payload,0,payload.length)) throw new SecurityException("Ed25519 signature rejected");
         JSONObject m = object(payload); exact(m, "schema", "channel", "revision", "min_core", "files");
         integer(m, "schema", 2, 2); if (!"lac".equals(m.getString("channel"))) throw new SecurityException("Wrong channel");
         integer(m, "revision", 1, 1_000_000); integer(m, "min_core", 1, 1);

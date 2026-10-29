@@ -1,40 +1,39 @@
-# HACER 13 — LAC XAPK local integration prototype
+# HACER 13 — authorized source integration and local LAC audit
 
-**Goal:** Make an *in-game*, user-visible MOD MENU with a signed **data-only** GitHub updater, without storing a ~426 MB third-party game in GitHub. This kit is **source code only**. It has not yet generated a verified working game APK. The menu is demonstrative and does not modify health, speed, weapons, etc.
+The repository contains no LAC APK, OBB or XAPK. The original supplied archive is read only. Its APK/OBB package/version and original Android certificate were checked; see ../reports/xapk-audit.json. No working patched LAC build is claimed.
 
-## Why not upload the XAPK to the repository?
-- GitHub ordinary Git rejects an individual file over 100 MiB.
-- LAC XAPK is ~426 MB, OBB uncompressed 406.5 MB, APK 95.5 MB.
-- Do not redistribute the proprietary game without rights. Keep the original XAPK on your computer; commit patch tools and signed menu data only.
+## Preferred source integration
 
-## What the patcher intends to do
-1. Read the local `com.ma.lac_60(2).xapk` without uploading it.
-2. Decode the APK with Apktool, hook `UnityPlayerActivity.onCreate` to show an `H13` button inside the game window.
-3. Build a small Java hook DEX; embed it in the APK.
-4. Rebuild, align, and **re-sign the APK with your own stable keystore**.
-5. Repack **the original OBB unchanged** alongside the signed APK into local XAPK.
-6. The in-game menu checks `updates/lac/release.json` at app launch (max once per 6 hours) and upon user action, verifies Ed25519 signed JSON and downloads only its small menu data; **never** downloads executable code.
+Use the hook Gradle project and its updater project dependency in a host you are permitted to change. After the host Activity creates its content:
 
-## Requirements
-- Android SDK 35, Android build-tools 35.0.0, Java 17, Gradle 8.11.1, Apktool 2.11+.
-- Android 13+ for Ed25519 verification (menu UI supports Android 7+, but the signed updater reports unavailability on older Android versions).
-- Original LAC game XAPK that you legally obtained.
-- Keystore and `HACER_KEYSTORE_PASS` set in the environment. Keep keystore private, not in GitHub.
+    HacerHook.attach(this);
 
-## Example command (Windows PowerShell)
-```powershell
-$env:HACER_KEYSTORE_PASS = 'YOUR_STRONG_PASSWORD'
-python patcher/patch_xapk.py 'C:\path\com.ma.lac_60(2).xapk' 'C:\path\HACER13-LAC-patched.xapk' --sdk 'C:\Users\you\AppData\Local\Android\Sdk' --keystore 'C:\private\hacer13.jks' --alias hacer13
-```
+In its onDestroy:
 
-**Do not overwrite your official installed LAC package:** the modified APK's certificate differs from the original; first back up any saves. A re-signed APK may also fail in-game license/integrity checks. An XAPK packer/check is NOT a runtime smoke test.
+    HacerHook.detach(this);
 
-## Current test status
-- ZIP/XAPK structure and APK/OBB sizes observed from supplied sample.
-- Source code is not compiled in this environment (Android SDK + Apktool not installed).
-- **No modified APK or XAPK is being claimed as working.** Run a test on an authorized Android device before use.
+Requires Android 13+ and INTERNET for user-initiated signed data checks. The menu stays inside the host window; it needs no system overlay permission. attach is idempotent per Activity and has no static Activity reference. Core's PreviewActivity exercises this exact adapter.
 
-## Future
-- Build a compatible old-Android Ed25519 verifier.
-- Add the actual Unity game integrations **only after legal permission and compatibility testing**.
-- Add CI compilation test that uses only hook source code, no copyrighted binaries.
+Build the AAR plus its dependency:
+
+    gradle -p LAC-tools :hook:assembleRelease :updater:jar :updater:copyRuntimeLibs
+
+An AAR alone does not embed transitive JAR dependencies. Include updater.jar and the pinned BC JAR from core/updater/build/runtime-libs alongside hook-release.aar (or use the Gradle project dependencies). All switches are DEMO; there is no Unity memory manipulation, gameplay bridge, anti-cheat or license bypass.
+
+## Read-only XAPK validation
+
+    python LAC-tools/inspect_xapk.py /private/input.xapk --sdk /path/to/Android/Sdk --report /private/audit.json
+
+The auditor streams CRC/SHA-256 checks, rejects traversal/symlinks/duplicate entries and split-APK sets, reads APK metadata using aapt2, verifies Android signatures using apksigner, and requires the OBB package/version to match. Without SDK it reports structure-only and never claims signature or runtime validation.
+
+## Legacy local patcher: unverified compatibility
+
+The local patcher is retained for an independently authorized build. It is not run on the proprietary game in this development task. It requires Apktool, SDK 35 / build-tools 35.0.0, JDK 17, Gradle 8.11.1, a private user keystore outside the repository and two explicit review inputs:
+
+    python LAC-tools/patcher/patch_xapk.py /private/input.xapk /private/output.xapk --sdk /path/to/sdk --keystore /private/hacer13.jks --authorized-local-modification --expected-apk-sha256 REVIEWED_APK_HASH
+
+It validates the original APK/OBB before patching, changes only the declared SDK minimum and visible Activity UI entry point, adds the shared compiled menu/updater DEX, rebuilds, aligns, signs, verifies, and streams the original OBB unchanged. The post-packaging OBB hash must match. It does not prove Unity/game-side compatibility or licensing permission.
+
+A new certificate on the SAME package cannot update an official installation. It is not a separately installable package merely because its certificate changed. Do not erase an installed game or assume its private saves were backed up. The tools never uninstall it, bypass Android's signature checks or access private game saves. Use the game's supported export/backup feature before any independently authorized manual installation experiment.
+
+Only companion behavior is exercised by disposable-emulator CI, including a deliberate certificate-conflict test on com.hacer13.core. No copyrighted game is uploaded to Actions.
