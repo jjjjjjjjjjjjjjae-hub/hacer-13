@@ -90,7 +90,8 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           script: |
             gradle -p core --no-daemon :app:connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/com.hacer13.core/files/test-evidence core/app/build/android-evidence
+            mkdir -p core/app/build/android-evidence
+            adb pull /data/local/tmp/H13-Android-preview.png core/app/build/android-evidence/H13-Android-preview.png
             python3 tools/test_signature_conflict.py --sdk "$ANDROID_HOME" --apk core/app/build/outputs/apk/debug/app-debug.apk --report core/app/build/android-evidence/signature-conflict.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
@@ -100,3 +101,4 @@ jobs:
             core/app/build/reports/androidTests/
             core/app/build/outputs/androidTest-results/
             core/app/build/android-evidence/
+            core/app/build/outputs/apk/debug/

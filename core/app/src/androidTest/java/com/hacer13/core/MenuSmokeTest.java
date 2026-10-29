@@ -30,9 +30,11 @@ public class MenuSmokeTest {
         inst.runOnMainSync(()->assertEquals(3,switches(activity.getWindow().getDecorView())));
         // Save a screenshot of the actual Android UI, explicitly labelled preview host.
         Thread.sleep(200);
-        File directory=inst.getTargetContext().getExternalFilesDir("test-evidence");assertNotNull(directory);directory.mkdirs();
         Bitmap screenshot=inst.getUiAutomation().takeScreenshot();assertNotNull(screenshot);
-        try(FileOutputStream out=new FileOutputStream(new File(directory,"H13-Android-preview.png"))){assertTrue(screenshot.compress(Bitmap.CompressFormat.PNG,100,out));}
+        screenshot.recycle();
+        // Gradle uninstalls test packages after instrumentation; app-owned files are removed.
+        // Shell-owned evidence survives cleanup on this disposable emulator.
+        shell("screencap -p /data/local/tmp/H13-Android-preview.png");
         inst.runOnMainSync(()->{
             View title=find(activity.getWindow().getDecorView(),"HACER 13     •     CORE 1.0");assertNotNull(title);
             MenuView menu=(MenuView)title.getParent();View holder=(View)menu.getParent();float before=holder.getTranslationY();long now=SystemClock.uptimeMillis();
