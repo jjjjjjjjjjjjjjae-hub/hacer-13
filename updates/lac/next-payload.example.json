@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "revision": 3,
+  "min_core": 1,
+  "title": "HACER 13 · LAC Menu",
+  "note": "Example only: signed data fields are visual, not cheats.",
+  "features": [
+    {
+      "id": "core",
+      "title": "HACER Core",
+      "description": "Core v1.0 update system"
+    },
+    {
+      "id": "settings",
+      "title": "Menu Settings",
+      "description": "Appearance and status panel"
+    },
+    {
+      "id": "lac",
+      "title": "LAC Demo",
+      "description": "Visual menu only; gameplay is not modified"
+    }
+  ]
+}
