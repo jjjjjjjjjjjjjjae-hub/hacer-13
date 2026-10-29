@@ -6,6 +6,7 @@
 - Standalone Android app (Android 13/API 33 or newer).
 - Overlay menu with user-granted *Display over other apps* permission; close button.
 - On app launch, checks `updates/lac/release.json` on this GitHub repository (at most once every 6 h, or on demand).
+- Optional user-enabled periodic update check via Android JobScheduler, approximately every 6 hours, subject to Android scheduling rules. It can be turned off in the app.
 - Authenticates downloaded data bytes using the hard-coded Ed25519 public key, with the private signing key held outside this repo.
 - Only accepts structured **data-only menu configuration** with a higher `revision`; refuses unsigned/modified/oversized/unexpected data.
 - Stores config in app-private storage using Android AtomicFile, retains the previous version for manual rollback.
