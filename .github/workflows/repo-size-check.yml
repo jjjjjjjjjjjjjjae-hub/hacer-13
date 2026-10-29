@@ -1,0 +1,24 @@
+name: Protect 100 MB GitHub limit
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject large binaries / game assets
+        run: |
+          python3 - <<'PY'
+          import subprocess, pathlib, sys
+          bad=[]
+          for f in subprocess.check_output(['git','ls-files','-z']).decode().split('\0'):
+              if not f: continue
+              p=pathlib.Path(f)
+              if p.stat().st_size >= 90*1024*1024 or p.suffix.lower() in {'.apk','.obb','.xapk'}:
+                  bad.append(f'{f} ({p.stat().st_size} bytes)')
+          if bad:
+              print('Do not commit game archives; use local builds or authorized GitHub releases.\n'+'\n'.join(bad))
+              sys.exit(1)
+          print('Repository contains no large APK/OBB/XAPK files. GitHub 100 MiB limit respected.')
+          PY
