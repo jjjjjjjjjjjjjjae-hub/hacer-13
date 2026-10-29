@@ -2,6 +2,8 @@ plugins { id 'com.android.library' }
 android {
     namespace 'com.hacer13.embedded'
     compileSdk 35
-    defaultConfig { minSdk 24 }
+    defaultConfig { minSdk 33 }
+    sourceSets.main.java.srcDirs += ['../../core/ui/src/main/java']
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
+dependencies { implementation project(':updater') }

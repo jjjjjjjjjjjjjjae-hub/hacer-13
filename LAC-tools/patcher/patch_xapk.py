@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import hashlib
 from pathlib import Path
 
 EXPECTED_PKG = 'com.MA.LAC'
@@ -47,19 +48,32 @@ def extract_aar(path: Path, target: Path):
             shutil.copyfileobj(src, dest)
 
 def build(args):
+    if not args.authorized_local_modification:
+        raise SystemExit('Requires explicit --authorized-local-modification for a host you have permission to modify. Use the companion APK otherwise.')
     source = Path(args.xapk).resolve()
     output = Path(args.output).resolve()
+    repo = Path(__file__).resolve().parents[2]
+    if source == output or output.is_relative_to(repo):
+        raise SystemExit('Output must be a new path outside the source repository; never overwrite your original XAPK')
     if not source.is_file(): raise SystemExit('Input XAPK not found')
     if not shutil.which('apktool'): raise SystemExit('Please install apktool in PATH')
     sdk = Path(args.sdk).expanduser().resolve()
     build_tools = sdk / 'build-tools' / args.build_tools
-    d8, align, signer = [build_tools / x for x in ('d8','zipalign','apksigner')]
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from inspect_xapk import tool
+    d8, align, signer = [Path(tool(sdk,x)) for x in ('d8','zipalign','apksigner')]
     for tool in (d8, align, signer):
         if not tool.exists(): raise SystemExit(f'Missing Android build tool {tool}')
     project = Path(__file__).resolve().parents[1]
+    sys.path.insert(0,str(project))
+    from inspect_xapk import audit
+    inspected = audit(source, sdk)
+    actual = next(e['sha256'] for e in inspected['entries'] if e['path'].endswith('.apk'))
+    if actual != args.expected_apk_sha256:
+        raise SystemExit('APK SHA-256 does not match the explicitly reviewed input')
     if not shutil.which('gradle'): raise SystemExit('Install Gradle 8.11.1 or compatible version')
     # Local build outputs only. NEVER run this inside the public repository on a copyrighted game archive.
-    run('gradle', ':hook:assembleRelease', '--no-daemon', cwd=project)
+    run('gradle', ':hook:assembleRelease', ':updater:jar', '--no-daemon', cwd=project)
     aar = project / 'hook/build/outputs/aar/hook-release.aar'
     if not aar.is_file(): raise RuntimeError('No hook AAR produced')
     output.parent.mkdir(parents=True,exist_ok=True)
@@ -77,13 +91,21 @@ def build(args):
             with source_zip.open(apps[0]) as f, original.open('wb') as o: shutil.copyfileobj(f,o)
         decoded = wd / 'decoded'
         run('apktool','d','-r','-f',str(original),'-o',str(decoded))
+        # The shared verifier intentionally requires Android 13+. Apktool owns SDK metadata.
+        apktool_config = decoded/'apktool.yml'
+        metadata = apktool_config.read_text(encoding='utf-8')
+        metadata, count = re.subn(r"(?m)^(\s*minSdkVersion:)\s*.*$",r"\1 '33'",metadata)
+        if count != 1:
+            raise RuntimeError('Cannot safely set Android 13 minimum in apktool metadata')
+        apktool_config.write_text(metadata,encoding='utf-8')
         patch_smali(decoded)
         rebuilt = wd/'rebuilt.apk'
         run('apktool','b',str(decoded),'-o',str(rebuilt))
         jar = wd/'classes.jar'
         extract_aar(aar,jar)
         dex_dir = wd/'hook_dex';dex_dir.mkdir()
-        run(d8,'--min-api','24','--lib',sdk/'platforms/android-35/android.jar','--output',dex_dir,jar)
+        updater_jar = repo/'core/updater/build/libs/updater.jar'
+        run(d8,'--min-api','33','--lib',sdk/'platforms/android-35/android.jar','--output',dex_dir,jar,updater_jar)
         dex_files = [dex for dex in dex_dir.iterdir() if dex.name.endswith('.dex')]
         if len(dex_files) != 1: raise RuntimeError('Expected a single hook DEX')
         # Appending a separate DEX avoids merging/replacing any of the game's existing DEX classes.
@@ -113,7 +135,13 @@ def build(args):
                 if z.getinfo(entry.filename).file_size < 0: raise RuntimeError('Invalid entry')
             assert len(z.namelist()) == 2
         print('Wrote local patched XAPK:',output,'size',output.stat().st_size)
-        print('CAUTION: modified app uses a NEW signing certificate; install as a separate app after backing up saves.')
+        with zipfile.ZipFile(source) as before, zipfile.ZipFile(output) as after:
+            from inspect_xapk import digest
+            with before.open(obb_path) as a, after.open(obb_path) as b:
+                if digest(a) != digest(b):
+                    output.unlink(missing_ok=True)
+                    raise RuntimeError('OBB changed; rejected output')
+        print('New certificate, SAME package: it cannot update an official differently-signed LAC install. No automatic uninstall is performed. Export saves with the game-supported method first.')
         print('CAUTION: actual launch and game-side compatibility are NOT proven by packaging checks.')
 
 if __name__ == '__main__':
@@ -124,4 +152,6 @@ if __name__ == '__main__':
     p.add_argument('--build-tools',default='35.0.0')
     p.add_argument('--keystore',required=True)
     p.add_argument('--alias',default='hacer13')
+    p.add_argument('--authorized-local-modification',action='store_true')
+    p.add_argument('--expected-apk-sha256',required=True)
     build(p.parse_args())

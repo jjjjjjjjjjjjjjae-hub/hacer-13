@@ -42,6 +42,11 @@ public class MainActivity extends Activity {
         button("ЖАҢАРТУДЫ ТЕКСЕРУ", () -> check(true));
         button("ФОНДЫҚ АВТО ЖАҢАРТУ: ҚОСУ / ӨШІРУ", this::toggleScheduledUpdates);
         button("ҚАЛҚЫМАЛЫ MOD MENU", this::openOverlay);
+        button("МӘЗІРДІ ANDROID ТЕРЕЗЕСІНДЕ СЫНАУ", () -> startActivity(new Intent(this, PreviewActivity.class)));
+        button("LAC ОЙЫНЫН АШУ", () -> {
+            Intent launch = getPackageManager().getLaunchIntentForPackage("com.MA.LAC");
+            if (launch == null) status.setText("LAC орнатылмаған немесе қолжетімсіз"); else startActivity(launch);
+        });
         button("БҰРЫНҒЫ НҰСҚАҒА ҚАЙТУ", () -> {
             status.setText(ConfigStore.rollback(this) ? "Алдыңғы баптаулар қалпына келді" : "Резервтік нұсқа жоқ");
             render();
@@ -50,7 +55,7 @@ public class MainActivity extends Activity {
         catalog = label("", 15, Color.LTGRAY, false);
         label("DEMO • Бұл меню ойын кодын өзгертпейді. Жасырын қолжетімділік, root және APK патчтау жоқ.", 12, Color.GRAY, false);
         render();
-        check(false);
+        // Network checks require a user action or an opted-in scheduled job.
     }
     @Override protected void onResume() { super.onResume(); if (catalog != null) render(); }
 
@@ -117,6 +122,11 @@ public class MainActivity extends Activity {
     }
 
     private void openOverlay() {
+        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            status.setText("H13 тоқтату хабарламасы үшін рұқсат беріп, батырманы қайта бас");
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 13);
+            return;
+        }
         if (!Settings.canDrawOverlays(this)) {
             status.setText("Алдымен «Басқа қолданбалардың үстінде көрсету» рұқсатын бер");
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -124,7 +134,7 @@ public class MainActivity extends Activity {
             startActivity(intent);
             return;
         }
-        startService(new Intent(this, OverlayService.class));
+        startForegroundService(new Intent(this, OverlayService.class));
         status.setText("Қалқымалы мәзір іске қосылды · өзің жаба аласың");
     }
 }

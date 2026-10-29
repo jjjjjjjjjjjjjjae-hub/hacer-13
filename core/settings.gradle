@@ -7,3 +7,6 @@ dependencyResolutionManagement {
 }
 rootProject.name = 'HACER-Core'
 include ':app'
+include ':updater'
+include ':hook'
+project(':hook').projectDir = file('../LAC-tools/hook')

@@ -1,0 +1,31 @@
+{
+  "archive_bytes": 426126131,
+  "status": "apk-obb-verified",
+  "runtime_tested": false,
+  "entries": [
+    {
+      "path": "com.MA.LAC-60.apk",
+      "bytes": 95484109,
+      "sha256": "3a8c02dbce359d3b2c644c55244386877fd38947baaec18ea1f01044f34f7c6d",
+      "crc32": "9ec6c2c9"
+    },
+    {
+      "path": "Android/obb/com.MA.LAC/main.60.com.MA.LAC.obb",
+      "bytes": 406496175,
+      "sha256": "d5cfbcd736c31d5fd9f771d23f995fbf4249fbab83274993c87a259b0977e863",
+      "crc32": "009e7dd3"
+    }
+  ],
+  "crc_verified": true,
+  "obb_package": "com.MA.LAC",
+  "obb_version_code": 60,
+  "package": "com.MA.LAC",
+  "version_code": 60,
+  "version_name": "1.9.7",
+  "signature_verified": true,
+  "certificate_report": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\nSigner #1 certificate DN: C=IR, ST=Gilan, L=Bandar-e Anzali, O=MA, OU=Alizade, CN=Mohammad Alizade\nSigner #1 certificate SHA-256 digest: bb8502df2985192eb3636375968a69c28afb0e06485cdb8e5725069e80bf7fc0\nSigner #1 certificate SHA-1 digest: d9a9f422e8f428e6aafbf09458780ff569688edb\nSigner #1 certificate MD5 digest: 922a868a658c033dfd47c0dd1005223e\nSigner #1 key algorithm: RSA\nSigner #1 key size (bits): 1024\nSigner #1 public key SHA-256 digest: a0da04fdd6a1f4c1537e9a63e7fc2548324f5a00544829eab422789f9e4f9032\nSigner #1 public key SHA-1 digest: 89fbb3a5bb2938d3f5a1b7e692e63a0b080b44f7\nSigner #1 public key MD5 digest: b002aff1ec92035090d89b0a6668a16d\n",
+  "native_abis": [
+    "arm64-v8a",
+    "armeabi-v7a"
+  ]
+}

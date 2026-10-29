@@ -7,11 +7,29 @@ android {
         applicationId 'com.hacer13.core'
         minSdk 33 // Android 13+: platform Ed25519 signature verification
         targetSdk 35
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 2
+        versionName '1.0.1'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    signingConfigs {
+        release {
+            if (System.getenv('HACER_KEYSTORE')) {
+                storeFile file(System.getenv('HACER_KEYSTORE'))
+                storePassword System.getenv('HACER_KEYSTORE_PASS')
+                keyAlias System.getenv('HACER_KEY_ALIAS') ?: 'hacer13'
+                keyPassword System.getenv('HACER_KEY_PASS') ?: System.getenv('HACER_KEYSTORE_PASS')
+            }
+        }
+    }
+    buildTypes.release { if (System.getenv('HACER_KEYSTORE')) signingConfig signingConfigs.release }
+}
+dependencies {
+    implementation project(':updater')
+    implementation project(':hook')
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }

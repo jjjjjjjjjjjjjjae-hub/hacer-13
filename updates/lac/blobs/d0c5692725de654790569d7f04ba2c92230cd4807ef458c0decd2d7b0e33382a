@@ -1,0 +1,8 @@
+{
+  "title": "HACER 13 · LAC",
+  "features": [
+    {"id":"god","title":"God Mode","description":"Демонстрация: ойынға әсер етпейді","kind":"demo"},
+    {"id":"jump","title":"High Jump","description":"Демонстрация: ойынға әсер етпейді","kind":"demo"},
+    {"id":"speed","title":"Speed","description":"Демонстрация: ойынға әсер етпейді","kind":"demo"}
+  ]
+}
