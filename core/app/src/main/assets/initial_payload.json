@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "min_core": 1,
+  "title": "HACER 13 — Offline",
+  "note": "Built-in menu. GitHub checks for signed data-only updates.",
+  "features": [
+    {
+      "id": "update",
+      "title": "Auto Update",
+      "description": "Secure updates from GitHub"
+    },
+    {
+      "id": "demo",
+      "title": "MOD MENU Preview",
+      "description": "Visual only — no gameplay modifications"
+    }
+  ]
+}
