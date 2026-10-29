@@ -118,6 +118,7 @@ def build(args):
             nums = [int(m.group(1) or '1') for name in existing if (m:=re.fullmatch(r'classes(\d*)\.dex',name))]
             for index, dex in enumerate(sorted(dex_files),start=max(nums)+1):
                 zipout.write(dex,f'classes{index}.dex')
+            zipout.write(repo/'core/ui/src/main/assets/open_source_notices.txt','assets/hacer13/open_source_notices.txt')
         aligned = wd/'aligned.apk'
         run(align,'-f','-p','4',apk_with_dex,aligned)
         signing_keystore = Path(args.keystore).expanduser().resolve()

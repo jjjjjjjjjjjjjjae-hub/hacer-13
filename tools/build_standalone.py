@@ -28,12 +28,9 @@ def build(sdk,jdk,keystore,output,bc_jar,alias='hacer13'):
         E.register_namespace('android','http://schemas.android.com/apk/res/android');manifest=E.parse(root/'core/app/src/main/AndroidManifest.xml');manifest.getroot().set('package','com.hacer13.core')
         manifest.find('application').set('{http://schemas.android.com/apk/res/android}debuggable','false')
         xml=tmp/'AndroidManifest.xml';manifest.write(xml,encoding='utf-8',xml_declaration=True)
-        unsigned=tmp/'unsigned.apk';run(tool(sdk,'aapt2'),'link','-o',unsigned,'--manifest',xml,'-I',android,'--min-sdk-version','33','--target-sdk-version','35','--version-code','2','--version-name','1.0.1')
+        unsigned=tmp/'unsigned.apk';run(tool(sdk,'aapt2'),'link','-o',unsigned,'--manifest',xml,'-I',android,'-A',root/'core/ui/src/main/assets','--min-sdk-version','33','--target-sdk-version','35','--version-code','2','--version-name','1.0.1')
         with zipfile.ZipFile(unsigned,'a',compression=zipfile.ZIP_DEFLATED) as z:
             for f in dex.glob('classes*.dex'):z.write(f,f.name)
-            with zipfile.ZipFile(bc_jar) as dependency:
-                for name in dependency.namelist():
-                    if 'LICENSE' in name.upper() and not name.endswith('/'):z.writestr('assets/licenses/bouncycastle-'+pathlib.Path(name).name,dependency.read(name))
         aligned=tmp/'aligned.apk';run(tool(sdk,'zipalign'),'-f','4',unsigned,aligned)
         output.parent.mkdir(parents=True,exist_ok=True)
         cmd=[tool(sdk,'apksigner'),'sign','--ks',str(keystore),'--ks-key-alias',alias,'--ks-pass','env:HACER_KEYSTORE_PASS','--out',str(output),str(aligned)]
