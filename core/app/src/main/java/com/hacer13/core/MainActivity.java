@@ -1,6 +1,9 @@
 package com.hacer13.core;
 
 import android.app.Activity;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -37,6 +40,7 @@ public class MainActivity extends Activity {
         revision = label("", 17, Color.rgb(64, 228, 190), true);
         status = label("Жаңартуды тексеруге дайын", 14, Color.LTGRAY, false);
         button("ЖАҢАРТУДЫ ТЕКСЕРУ", () -> check(true));
+        button("ФОНДЫҚ АВТО ЖАҢАРТУ: ҚОСУ / ӨШІРУ", this::toggleScheduledUpdates);
         button("ҚАЛҚЫМАЛЫ MOD MENU", this::openOverlay);
         button("БҰРЫНҒЫ НҰСҚАҒА ҚАЙТУ", () -> {
             status.setText(ConfigStore.rollback(this) ? "Алдыңғы баптаулар қалпына келді" : "Резервтік нұсқа жоқ");
@@ -85,6 +89,33 @@ public class MainActivity extends Activity {
         status.setText("GitHub жаңартуы тексерілуде…");
         UpdateEngine.check(this, force, result -> { status.setText(result); render(); });
     }
+    private void toggleScheduledUpdates() {
+        JobScheduler scheduler = getSystemService(JobScheduler.class);
+        if (scheduler == null) {
+            status.setText("Құрылғы фондық жаңартуды қолдамайды");
+            return;
+        }
+        final int jobId = 13013;
+        boolean enabled = false;
+        for (JobInfo job : scheduler.getAllPendingJobs()) {
+            if (job.getId() == jobId) { enabled = true; break; }
+        }
+        if (enabled) {
+            scheduler.cancel(jobId);
+            status.setText("Фондық авто жаңарту өшірілді");
+        } else {
+            JobInfo job = new JobInfo.Builder(jobId, new ComponentName(this, UpdateJobService.class))
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    .setPeriodic(6L * 60L * 60L * 1000L)
+                    .setPersisted(true)
+                    .build();
+            int result = scheduler.schedule(job);
+            status.setText(result == JobScheduler.RESULT_SUCCESS
+                    ? "Авто жаңарту қосылды · Android шамамен әр 6 сағатта тексереді"
+                    : "Фондық тапсырманы тіркеу мүмкін болмады");
+        }
+    }
+
     private void openOverlay() {
         if (!Settings.canDrawOverlays(this)) {
             status.setText("Алдымен «Басқа қолданбалардың үстінде көрсету» рұқсатын бер");
