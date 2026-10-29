@@ -67,4 +67,15 @@ public class MenuSmokeTest {
             for(ActivityManager.RunningServiceInfo s:c.getSystemService(ActivityManager.class).getRunningServices(30))assertNotEquals(OverlayService.class.getName(),s.service.getClassName());
         }finally{c.stopService(new Intent(c,OverlayService.class));shell("appops set "+pkg+" SYSTEM_ALERT_WINDOW default");}
     }
+    @Test public void scheduledUpdatesOptInRunAndOptOut()throws Exception{
+        launch(MainActivity.class);Context c=inst.getTargetContext();android.app.job.JobScheduler scheduler=c.getSystemService(android.app.job.JobScheduler.class);scheduler.cancel(13013);
+        click("ФОНДЫҚ АВТО ЖАҢАРТУ: ҚОСУ / ӨШІРУ");assertNotNull("User opt-in must schedule the network job",scheduler.getPendingJob(13013));
+        try{
+            shell("cmd jobscheduler run -f "+c.getPackageName()+" 13013");
+            long deadline=SystemClock.elapsedRealtime()+25000;
+            while(ConfigStore.engine(c).current().revision==0&&SystemClock.elapsedRealtime()<deadline)Thread.sleep(250);
+            assertTrue("Scheduled JobService must install the signed data without a manual update click",ConfigStore.engine(c).current().revision>=1);
+            click("ФОНДЫҚ АВТО ЖАҢАРТУ: ҚОСУ / ӨШІРУ");assertNull("User opt-out must cancel the job",scheduler.getPendingJob(13013));
+        }finally{scheduler.cancel(13013);}
+    }
 }
