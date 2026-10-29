@@ -1,0 +1,32 @@
+{
+  "source_commit": "c99d6c721eb4cf73d7daaae73d4ccd3046630af9",
+  "actions_run_id": 40933513228,
+  "actions_url": "https://github.com/jjjjjjjjjjjjjjae-hub/hacer-13/actions/runs/40933513228",
+  "runtime_artifact_id": 12924790255,
+  "build_artifact_id": 12924605437,
+  "jvm_tests_passed": 30,
+  "python_tests_passed": 12,
+  "android15_tests_passed": 4,
+  "signature_conflict_test_passed": true,
+  "signed_companion": {
+    "source_commit": "c99d6c721eb4cf73d7daaae73d4ccd3046630af9",
+    "artifact": "HACER-Core-1.0.1-signed.apk",
+    "size_bytes": 2204125,
+    "sha256": "c60e0cb4beae2bb462405bdeedec346ac414cf58a2fd1de936a4f464ae484de2",
+    "android_certificate_sha256": "8f896b3f23bd1ed09363e2a9ca3b07f623c7148a5fd92f05829319ccba3e11ed",
+    "build": "JDK17 javac/D8/aapt2/zipalign/apksigner; pinned BC1.86",
+    "apk_signature_verified": true,
+    "this_binary_runtime_tested": false,
+    "game_files_included": false,
+    "license_notice_in_apk": true
+  },
+  "tested_ci_debug_apk": {
+    "file_name": "HACER-Core-1.0.1-CI-debug.apk",
+    "size_bytes": 6093118,
+    "sha256": "a060260cfd8b5f5d7e368dcca632c9064ac320cb771adbb7833bbb7b50919c7c",
+    "this_binary_runtime_tested": true,
+    "certificate": "Temporary CI Android debug identity; use the separately retained HACER keystore for stable releases."
+  },
+  "game_runtime_tested": false,
+  "game_apk_modified": false
+}

@@ -28,6 +28,11 @@ public class MenuSmokeTest {
     @Test public void menuOpensMovesCollapsesClosesAndReattaches()throws Exception{
         launch(PreviewActivity.class);click("H13");
         inst.runOnMainSync(()->assertEquals(3,switches(activity.getWindow().getDecorView())));
+        inst.runOnMainSync(()->{
+            ViewGroup content=activity.findViewById(android.R.id.content);View holder=content.findViewWithTag("HACER13_VISIBLE_MENU");
+            assertNotNull(holder);assertTrue("Menu left edge must fit",holder.getX()>=0);assertTrue("Menu right edge must fit",holder.getX()+holder.getWidth()<=content.getWidth());
+            assertTrue("Menu bottom edge must fit",holder.getY()+holder.getHeight()<=content.getHeight());
+        });
         // Save a screenshot of the actual Android UI, explicitly labelled preview host.
         Thread.sleep(200);
         Bitmap screenshot=inst.getUiAutomation().takeScreenshot();assertNotNull(screenshot);

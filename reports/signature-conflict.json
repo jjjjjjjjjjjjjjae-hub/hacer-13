@@ -1,0 +1,7 @@
+{
+  "result": "passed",
+  "expected_error": "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
+  "original_install_retained": true,
+  "device": "disposable-emulator",
+  "game_install_touched": false
+}
